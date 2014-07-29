@@ -21,11 +21,11 @@ def edge_swap(G, nodes, nswap=1, max_tries=100):
         u -- y
         v -- x
 
-    This retains the bipartivity and node degrees.
-    """
-    assert nx.is_bipartite(G)
+    This retains the bipartivity and node degrees. It is not checked whether
+    G is actually bipartite.
 
-    swap_count, n = 0, 0
+    """
+    swap_count, num_tries = 0, 0
     nodelist = list(nodes)
 
     while swap_count < nswap:
@@ -38,20 +38,20 @@ def edge_swap(G, nodes, nswap=1, max_tries=100):
         if x == y:  # Same bottom node
             continue
         if not G.has_edge(u, y) and not G.has_edge(v, x):
-            G.add_edge(u, y)
-            G.add_edge(v, x)
-            G.remove_edge(u, x)
-            G.remove_edge(v, y)
+            G.add_edges_from([(u, y), (v, x)])
+            G.remove_edges_from([(u, x), (v, y)])
             swap_count += 1
-        if n > max_tries:
+        if num_tries > max_tries:
             log.logger.warning("Maximum number of tries exceeded")
             break
-        n += 1
+        num_tries += 1
 
     return G
 
 
 def random_bipartite_graph_model(G, nodes, nsample=10, **kwargs):
+    assert nx.is_bipartite(G)
+
     for i in progressbar(range(nsample), "Generating random graphs"):
         G = edge_swap(G, nodes, **kwargs)
         yield G
