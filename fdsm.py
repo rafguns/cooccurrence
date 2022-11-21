@@ -83,13 +83,14 @@ def random_bipartite_graph_model(G, nodes, nsample=10, **kwargs):
         yield G
 
 
-def z_scores(G, nodes, **kwargs):
+def obs_mean_stdev(G, nodes, nsample=10, **kwargs):
     projection = bipartite.weighted_projected_graph(G, nodes)
     cooccs = projection.edges()
 
     # sum_n is the sum of the number of co-occurrences over all random graphs
     # sum_n2 is the square sum.
     # These can be used to determine the mean and standard deviation.
+    all_n = {}
     sum_n = {}
     sum_n2 = {}
 
@@ -97,28 +98,39 @@ def z_scores(G, nodes, **kwargs):
     # XXX Maybe we should NOT do this?
     for x, y in cooccs:
         n = len(set(G[x]) & set(G[y]))
+        all_n["{} - {}".format(x, y)] = [n]
         sum_n[(x, y)] = float(n)
         sum_n2[(x, y)] = float(n ** 2)
-    for i, R in enumerate(random_bipartite_graph_model(G, nodes, **kwargs)):
+    for R in random_bipartite_graph_model(G, nodes, nsample, **kwargs):
         for x, y in cooccs:
             n = len(set(R[x]) & set(R[y]))
+            all_n["{} - {}".format(x, y)].append(n)
             sum_n[(x, y)] += n
             sum_n2[(x, y)] += n ** 2
 
-    z = {}
-    n = i + 1
+    import json
+    with open("very-raw.json", "wb") as fh:
+        json.dump(all_n, fh)
     for (x, y), total in sum_n.iteritems():
-        mean = total / n
+        obs = projection.edge[x][y]['weight']
+        mean = total / nsample
+        # Running standard deviation
         # http://stackoverflow.com/questions/1174984
         try:
-            stdev = math.sqrt((sum_n2[(x, y)] / n) - (mean * mean))
+            stdev = math.sqrt((sum_n2[(x, y)] / nsample) - (mean * mean))
         except ValueError:
             # This is typically due to negative numbers because of rounding
             # errors
-            logger.warning("Stdev = sqrt(%.4f)" % ((sum_n2[(x, y)] / n) -
+            logger.warning("Stdev = sqrt(%.4f)" % ((sum_n2[(x, y)] / nsample) -
                                                    (mean * mean)))
             stdev = 0.0
-        difference = projection.edge[x][y]['weight'] - mean
+        yield (x, y), obs, mean, stdev
+
+
+def z_scores(G, nodes, **kwargs):
+    z = {}
+    for (x, y), obs, mean, stdev in obs_mean_stdev(G, nodes, **kwargs):
+        difference = obs - mean
         try:
             z[(x, y)] = difference / stdev
         except ZeroDivisionError:
