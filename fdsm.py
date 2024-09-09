@@ -1,36 +1,13 @@
 import logging
 import math
 import random
-import sys
 from operator import itemgetter
 
 import networkx as nx
 from networkx import bipartite
+from rich.progress import track
 
 logger = logging.getLogger(__name__)
-
-
-def _progressbar(it, prefix="", size=60):
-    """Show progress bar
-
-    Source: http://code.activestate.com/recipes/576986-progress-bar-for-console-programs-as-iterator/
-
-    """
-    count = len(it)
-
-    def _show(_i):
-        x = int(size * _i / count)
-        sys.stdout.write(
-            "%s[%s%s] %i/%i\r" % (prefix, "#" * x, "." * (size - x), _i, count)
-        )
-        sys.stdout.flush()
-
-    _show(0)
-    for i, item in enumerate(it, start=1):
-        yield item
-        _show(i)
-    sys.stdout.write("\n")
-    sys.stdout.flush()
 
 
 def edge_swap(G, nodes, nswap=1, max_tries=100):
@@ -78,7 +55,7 @@ def edge_swap(G, nodes, nswap=1, max_tries=100):
 def random_bipartite_graph_model(G, nodes, nsample=10, **kwargs):
     assert nx.is_bipartite(G)
 
-    for _ in _progressbar(range(nsample), "Generating random graphs"):
+    for _ in track(range(nsample), description="Generating random graphs"):
         G = edge_swap(G, nodes, **kwargs)
         yield G
 
