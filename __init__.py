@@ -1,2 +1,2 @@
-import fdsm
 import cosine
+import fdsm

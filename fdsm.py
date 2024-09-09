@@ -1,11 +1,11 @@
 import logging
 import math
-import networkx as nx
-import sys
 import random
-
-from networkx import bipartite
+import sys
 from operator import itemgetter
+
+import networkx as nx
+from networkx import bipartite
 
 logger = logging.getLogger(__name__)
 
@@ -21,8 +21,8 @@ def _progressbar(it, prefix="", size=60):
     def _show(_i):
         x = int(size * _i / count)
         sys.stdout.write(
-            "%s[%s%s] %i/%i\r" % (prefix, "#" * x, "." * (size - x),
-                                  _i, count))
+            "%s[%s%s] %i/%i\r" % (prefix, "#" * x, "." * (size - x), _i, count)
+        )
         sys.stdout.flush()
 
     _show(0)
@@ -78,7 +78,7 @@ def edge_swap(G, nodes, nswap=1, max_tries=100):
 def random_bipartite_graph_model(G, nodes, nsample=10, **kwargs):
     assert nx.is_bipartite(G)
 
-    for i in _progressbar(range(nsample), "Generating random graphs"):
+    for _ in _progressbar(range(nsample), "Generating random graphs"):
         G = edge_swap(G, nodes, **kwargs)
         yield G
 
@@ -98,21 +98,18 @@ def obs_mean_stdev(G, nodes, nsample=10, **kwargs):
     # XXX Maybe we should NOT do this?
     for x, y in cooccs:
         n = len(set(G[x]) & set(G[y]))
-        all_n["{} - {}".format(x, y)] = [n]
+        all_n[f"{x} - {y}"] = [n]
         sum_n[(x, y)] = float(n)
-        sum_n2[(x, y)] = float(n ** 2)
+        sum_n2[(x, y)] = float(n**2)
     for R in random_bipartite_graph_model(G, nodes, nsample, **kwargs):
         for x, y in cooccs:
             n = len(set(R[x]) & set(R[y]))
-            all_n["{} - {}".format(x, y)].append(n)
+            all_n[f"{x} - {y}"].append(n)
             sum_n[(x, y)] += n
-            sum_n2[(x, y)] += n ** 2
+            sum_n2[(x, y)] += n**2
 
-    import json
-    with open("very-raw.json", "wb") as fh:
-        json.dump(all_n, fh)
     for (x, y), total in sum_n.iteritems():
-        obs = projection.edge[x][y]['weight']
+        obs = projection.edge[x][y]["weight"]
         mean = total / nsample
         # Running standard deviation
         # http://stackoverflow.com/questions/1174984
@@ -121,8 +118,9 @@ def obs_mean_stdev(G, nodes, nsample=10, **kwargs):
         except ValueError:
             # This is typically due to negative numbers because of rounding
             # errors
-            logger.warning("Stdev = sqrt(%.4f)" % ((sum_n2[(x, y)] / nsample) -
-                                                   (mean * mean)))
+            logger.warning(
+                "Stdev = sqrt(%.4f)", ((sum_n2[(x, y)] / nsample) - (mean * mean))
+            )
             stdev = 0.0
         yield (x, y), obs, mean, stdev
 
@@ -134,8 +132,13 @@ def z_scores(G, nodes, **kwargs):
         try:
             z[(x, y)] = difference / stdev
         except ZeroDivisionError:
-            logger.warning("Ignoring pair (%s, %s) with difference %.4f "
-                           "and stdev %.4f" % (x, y, difference, stdev))
+            logger.warning(
+                "Ignoring pair (%s, %s) with difference %.4f and stdev %.4f",
+                x,
+                y,
+                difference,
+                stdev,
+            )
     return z
 
 
